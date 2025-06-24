@@ -2,6 +2,6 @@
 
 public interface IProducerClient<Key, Value> : IDisposable
 {
-	Task ProduceAsync(string topic, int partition, Key key, Value message, CancellationToken cancellationToken = default);
+	Task ProduceAsync(string topic,  Key key, Value message, int? partition = null, CancellationToken cancellationToken = default);
 
 }

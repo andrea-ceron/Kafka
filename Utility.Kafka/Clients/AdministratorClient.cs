@@ -1,14 +1,18 @@
 ﻿using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Utility.Kafka.Abstraction.Clients;
+using Utility.Kafka.Abstraction.Errors;
 using Utility.Kafka.DependencyInjection;
+using Utility.Kafka.ExceptionManager;
 
 namespace Utility.Kafka.Clients;
 
@@ -16,17 +20,23 @@ public class AdministratorClient : IAdministratorClient
 {
 	bool _disposedValue;
 	readonly IAdminClient _adminClient;
+	readonly ILogger<AdministratorClient> _logger;
+	ErrorManagerMiddleware _errorManagerMiddleware;
 
-	public AdministratorClient(IOptions<KafkaAdminClientOptions> configOptions)
+
+	public AdministratorClient(IOptions<KafkaAdminClientOptions> configOptions, ILogger<AdministratorClient> logger, ErrorManagerMiddleware errorManager)
 	{
+		_errorManagerMiddleware = errorManager;
+		_logger = logger;
 		_adminClient = ConfigAndBuildAdminClient(configOptions);
+		_logger.LogInformation("Kafka Administrator Client creato con configurazioni: {configOptions}", JsonSerializer.Serialize(configOptions));
 	}
 	private IAdminClient ConfigAndBuildAdminClient(IOptions<KafkaAdminClientOptions> configOptions)
 	{
 		var AdminClientBuilder = new AdminClientBuilder(new AdminClientConfig
 		{
 			BootstrapServers = configOptions.Value.BootstrapServers,
-			ClientId = Dns.GetHostName() + "-AdminClient",
+			ClientId = Dns.GetHostName() 
 		});
 		return AdminClientBuilder.Build();
 	}
@@ -40,12 +50,22 @@ public class AdministratorClient : IAdministratorClient
 			NumPartitions = numPartitions,
 			ReplicationFactor = replicationFactor,
 		};
-		await _adminClient.CreateTopicsAsync(new List<TopicSpecification> { TopicConfig });
+
+		await _errorManagerMiddleware.InvokeAsync(async () =>
+	   {
+		   await _adminClient.CreateTopicsAsync(new List<TopicSpecification> { TopicConfig });
+	   },  ErrorManagerMiddleware.OperationClient.Admin, nameof(CreateTopicAsync));
+		_logger.LogInformation("Topic creato: {topicName}", topicName);
+
 	}
 
 	public async  Task DeleteTopicAsync(string topicName)
 	{
-		await _adminClient.DeleteTopicsAsync(new List<string> { topicName });
+		await _errorManagerMiddleware.InvokeAsync(async () =>
+		{
+			await _adminClient.DeleteTopicsAsync(new List<string> { topicName });
+		}, ErrorManagerMiddleware.OperationClient.Admin, nameof(DeleteTopicAsync));
+		_logger.LogInformation("Topic eliminato: {topicName}", topicName);
 	}
 
 	public Metadata GetKafkaClusterData(string? topic = null)
@@ -69,17 +89,13 @@ public class AdministratorClient : IAdministratorClient
 		{
 			if (disposing)
 			{
-				try
+				 _errorManagerMiddleware.Invoke( () =>
 				{
 					_adminClient.Dispose();
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine($"Error disposing IAdminClient: {ex.Message}");
-				}
+				}, ErrorManagerMiddleware.OperationClient.Admin, nameof(Dispose));
 			}
-		}
 		_disposedValue = true;
+		}
 	}
 	public void Dispose()
 	{

@@ -12,6 +12,8 @@ public abstract class KafkaClientOptions
 
 }
 
+
+
 public class KafkaAdminClientOptions : KafkaClientOptions
 {
 	public const string SectionName = "Kafka:AdminClient";
@@ -34,6 +36,11 @@ public class KafkaProducerServiceOptions
 	public const string SectionName = "Kafka:ProducerService";
 	public int DelaySeconds { get; set; } = 60;
 	public int IntervalSeconds { get; set; } = 60;
+	public int MaxFailuresCloseCircuit { get; set; } = 5;
+	public int MaxFailuresHalfCloseCircuit { get; set; } = 1;
+	public int ResetTimeout { get; set; } = 3000;
+	public int MaxOpenCircuitCount { get; set; } = 3;
+
 }
 
 public interface IKafkaTopics
