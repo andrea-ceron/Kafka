@@ -1,13 +1,4 @@
-﻿using Confluent.Kafka;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Timers;
-
-namespace Utility.Kafka.ExceptionManager.CircuitBraker;
+﻿namespace Utility.Kafka.ExceptionManager.CircuitBraker;
 
 public class CircuitBraker
 {
@@ -22,7 +13,6 @@ public class CircuitBraker
 	private int _maxOpenCircuitCount;
 	private TaskCompletionSource<bool> _tcs;
 	private ErrorManagerMiddleware _errorManagerMiddleware;
-
 
 	public CircuitBraker(int maxFailuresCloseCircuit, int maxFailuresHalfCloseCircuit, TimeSpan resetTimeout, int maxOpenCircuitCount, ErrorManagerMiddleware errorManagerMiddleware)
 	{
@@ -101,7 +91,7 @@ public class CircuitBraker
 				RecordFailure();
 				continue;
 			}
-
+			return res;
 
 
 		}

@@ -3,8 +3,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Utility.Kafka.Abstraction.Clients;
+using Utility.Kafka.Abstraction.Errors;
 using Utility.Kafka.Abstraction.MessageHandlers;
 using Utility.Kafka.Clients;
+using Utility.Kafka.ExceptionManager;
 using Utility.Kafka.Services;
 
 namespace Utility.Kafka.DependencyInjection;
@@ -29,7 +31,7 @@ public static  class KafkaDI
 			configuration.GetSection(KafkaConsumerClientOptions.SectionName));
 		service.AddSingleton<IConsumerClient<string, string>, Consumer>();
 		service.Configure<TKafkaTopicsInput>(
-		   configuration.GetSection(AbstractKafkaTopics.SectionName));
+		   configuration.GetSection(AbstractInputKafkaTopics.SectionName));
 		return service;
 	}
 
@@ -45,7 +47,7 @@ public static  class KafkaDI
 			configuration.GetSection(KafkaProducerServiceOptions.SectionName));
 		service.AddSingleton<IProducerClient<string, string>, Producer>();
 		service.Configure<TKafkaTopicsOutput>(
-		   configuration.GetSection(AbstractKafkaTopics.SectionName));
+		   configuration.GetSection(AbstractOutputKafkaTopics.SectionName));
 		return service;
 	}
 	private static bool IsEnable(IConfiguration configuration)
@@ -59,6 +61,11 @@ public static  class KafkaDI
 		return options.Enable;
 	}
 
+	private static IServiceCollection AddErrorManager(this IServiceCollection service)
+	{
+		service.AddSingleton<ErrorManagerMiddleware>();
+		return service;
+	}
 	public static IServiceCollection AddKafkaProducer<TKafkaTopicsOutput, TProducerService>(
 		this IServiceCollection service, IConfiguration configuration)
 		where TKafkaTopicsOutput : class, IKafkaTopics
@@ -68,6 +75,7 @@ public static  class KafkaDI
 		{
 			return service;
 		}
+		service.AddErrorManager();
 		service.AddAdministrator(configuration);
 		service.AddProducerServiceWithSubscription<TKafkaTopicsOutput, TProducerService>(configuration);
 		return service;
@@ -82,11 +90,29 @@ public static  class KafkaDI
 		{
 			return service;
 		}
+		service.AddErrorManager();
 		service.AddAdministrator(configuration);
 		service.AddConsumerService<TKafkaTopicsInput, TMessageHandlerFactory>(configuration);
 		return service;
 	}
 
+	public static IServiceCollection AddKafkaConsumerAndProducer<TKafkaTopicsInput, TKafkaTopicsOutput, TMessageHandlerFactory, TProducerService>(
+		this IServiceCollection service, IConfiguration configuration)
+		where TKafkaTopicsInput : class, IKafkaTopics
+		where TKafkaTopicsOutput : class, IKafkaTopics
+		where TProducerService : ProducerServiceWithSubscription
+		where TMessageHandlerFactory : class, IMessageHandlerFactory<string, string>
+	{
+		if (!IsEnable(configuration))
+		{
+			return service;
+		}
+		service.AddErrorManager();
+		service.AddAdministrator(configuration);
+		service.AddConsumerService<TKafkaTopicsInput, TMessageHandlerFactory>(configuration);
+		service.AddProducerServiceWithSubscription<TKafkaTopicsOutput, TProducerService>(configuration);
 
+		return service;
+	}
 
 }

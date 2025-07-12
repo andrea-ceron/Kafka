@@ -10,19 +10,21 @@ using Utility.Kafka.ExceptionManager;
 
 namespace Utility.Kafka.MessageHandlers
 {
-	public abstract class OperationMessageHandlerBase<TMessageDto> (ErrorManagerMiddleware errorManager)
+	public abstract class OperationMessageHandlerBase<TMessageDto, TModel> (ErrorManagerMiddleware errorManager)
 		: IMessageHandler<string, string>
 		 where TMessageDto : class
+		 where TModel : class
+
 	{
 		private ErrorManagerMiddleware _errorManager = errorManager;
 		public async Task OnMessageReceivedAsync(string key, string message, CancellationToken cancellationToken = default)
 		{
 			await Task.Run(async () =>
 			{
-				OperationMessage<TMessageDto>? operationMessage = null;
+				OperationMessage<TMessageDto, TModel>? operationMessage = null;
 				await _errorManager.InvokeAsync(async () =>
 				{
-					operationMessage = JsonSerializer.Deserialize<OperationMessage<TMessageDto>>(message);
+					operationMessage = JsonSerializer.Deserialize<OperationMessage<TMessageDto, TModel>>(message);
 					if (operationMessage == null)
 						throw new ArgumentNullException(nameof(operationMessage), "Deserialized operation message is null.");
 					switch (operationMessage.Operation)
@@ -35,6 +37,15 @@ namespace Utility.Kafka.MessageHandlers
 							break;
 						case Operations.Delete:
 							await DeleteAsync(operationMessage.Dto, cancellationToken);
+							break;
+						case Operations.CompensationInsert:
+							await CompensationInsertAsync(operationMessage.Dto, cancellationToken);
+							break;
+						case Operations.CompensationUpdate:
+							await CompensationUpdateAsync(operationMessage.Dto, cancellationToken);
+							break;
+						case Operations.CompensationDelete:
+							await CompensationDeleteAsync(operationMessage.Dto, cancellationToken);
 							break;
 						default:
 							throw new InvalidOperationException( "Non è possibile chiamare una funzione al di fuori di quelle definite");
@@ -49,7 +60,9 @@ namespace Utility.Kafka.MessageHandlers
 		protected abstract Task InsertAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
 		protected abstract Task UpdateAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
 		protected abstract Task DeleteAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
-
+		protected abstract Task CompensationInsertAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
+		protected abstract Task CompensationUpdateAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
+		protected abstract Task CompensationDeleteAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
 
 
 	}

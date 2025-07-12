@@ -1,7 +1,7 @@
 ﻿using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
-using System.Text.Json;
 using Utility.Kafka.Abstraction.Clients;
 using Utility.Kafka.DependencyInjection;
 using Utility.Kafka.ExceptionManager;
@@ -14,15 +14,18 @@ public class Producer : IProducerClient<string, string>
 	readonly IProducer<string, string> _producer;
 	private CircuitBraker? _circuitBraker = null;
 	ErrorManagerMiddleware _errorManagerMiddleware;
+	ILogger<Producer> _logger;
+	private readonly double ErrorTestCeilingProbability; // Probabilità di errore per testare il Circuit Braker
 
 	public Producer(
 		IOptions<KafkaProducerClientOptions> producerOptions,
 		IOptions<KafkaProducerServiceOptions> circuitBreakerOptions,
+		ILogger<Producer> logger,
 		ErrorManagerMiddleware errorManagerMiddleware)
 	{
 		_errorManagerMiddleware = errorManagerMiddleware;
 		_producer = new ProducerBuilder<string, string>(GetProducerConfig(producerOptions)).Build();
-
+		_logger = logger;
 		_circuitBraker = new CircuitBraker(
 			maxFailuresCloseCircuit: circuitBreakerOptions.Value.MaxFailuresCloseCircuit,
 			maxFailuresHalfCloseCircuit: circuitBreakerOptions.Value.MaxFailuresHalfCloseCircuit,
@@ -30,6 +33,7 @@ public class Producer : IProducerClient<string, string>
 			maxOpenCircuitCount: circuitBreakerOptions.Value.MaxOpenCircuitCount,
 			errorManagerMiddleware: errorManagerMiddleware
 		);
+		ErrorTestCeilingProbability = (double) circuitBreakerOptions.Value.ProbabilityOfFailure /100;
 	}
 
 	private ProducerConfig GetProducerConfig(IOptions<KafkaProducerClientOptions> options)
@@ -65,20 +69,27 @@ public class Producer : IProducerClient<string, string>
 
 	public async Task ProduceAsync(string topic,  string key, string message, int? partition = null, CancellationToken cancellationToken = default)
 	{
-		DeliveryResult<string, string>? deliveryResult;
+		_logger.LogInformation("Entrato in ProduceAsync");
+		DeliveryResult<string, string>? deliveryResult = null;
 		Message<string, string> msg = new() { Key = key, Value = message };
-
-		await _errorManagerMiddleware.InvokeAsync(async () =>
-		{
-			deliveryResult = await ProduceAsyncCircuitBraker(topic, partition, msg, cancellationToken);
-		}, ErrorManagerMiddleware.OperationClient.Produce, "ProduceAsync");
+		await ProduceAsyncCircuitBraker(topic, partition, msg, cancellationToken);
 	}
 
 	private async Task<DeliveryResult<string,string>?> ProduceAsyncCircuitBraker(string topic, int? partition, Message<string,string> msg, CancellationToken cancellationToken = default)
 	{
+		_logger.LogInformation("Entrato in ProduceAsyncCircuitBraker");
+		var randomValue = new Random();
 		return await _circuitBraker.ExecuteAsync(async () =>
 		{
-			if (partition.HasValue)
+			var elem = randomValue.NextDouble();
+			_logger.LogWarning($"Esecuzione Action da ProduceAsyncCircuitBreaker, random {elem}, ceiling {ErrorTestCeilingProbability}");
+
+			if (elem < ErrorTestCeilingProbability)
+			{
+				_logger.LogWarning($"Simulazione di errore per testare il Circuit Braker, random {elem}, ceiling {ErrorTestCeilingProbability}");
+				throw new KafkaException(new Error(ErrorCode.InvalidRequest, $"Simulazione di errore per testare il Circuit Braker, random {elem}, ceiling {ErrorTestCeilingProbability}"));
+			}
+			else if (partition.HasValue)
 			{
 				TopicPartition topicPartition = new(topic, partition.Value);
 				return await _producer.ProduceAsync(topicPartition, msg, cancellationToken);
@@ -87,8 +98,11 @@ public class Producer : IProducerClient<string, string>
 			{
 				return await _producer.ProduceAsync(topic, msg, cancellationToken);
 			}
-		}, cancellationToken);
+		}
+	, cancellationToken);
 	}
+
+
 
 
 }

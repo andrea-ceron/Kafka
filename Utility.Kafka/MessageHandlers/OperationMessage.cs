@@ -6,10 +6,13 @@ using System.Threading.Tasks;
 
 namespace Utility.Kafka.MessageHandlers;
 
-public class OperationMessage<TDto> where TDto : class
+public class OperationMessage<TDto, TModel> 
+	where TDto : class
+	where TModel : class
 {
 	public required string Operation { get; set; }
 	public required TDto Dto { get; set; }
+	public required TModel? previousState { get; set; }
 
 
 }

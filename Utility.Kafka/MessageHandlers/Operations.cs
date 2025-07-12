@@ -12,13 +12,19 @@ public class Operations
 	{
 		Insert, 
 		Update, 
-		Delete
+		Delete,
+		CompensationInsert,
+		CompensationUpdate,
+		CompensationDelete,
 	}
 	public const string Insert = "I";
 
 	public const string Update = "U";
 
 	public const string Delete = "D";
+	public const string CompensationInsert = "CI";
+	public const string CompensationUpdate = "CU";
+	public const string CompensationDelete = "CD";
 
 	public static string GetStringValue(Enum valueEnum)
 	{
@@ -27,6 +33,10 @@ public class Operations
 			QueryType.Insert => Insert,
 			QueryType.Update => Update,
 			QueryType.Delete => Delete,
+			QueryType.CompensationInsert => CompensationInsert,
+			QueryType.CompensationUpdate => CompensationUpdate,
+			QueryType.CompensationDelete => CompensationDelete,
+
 			_ => throw new ArgumentOutOfRangeException(nameof(valueEnum), $"{nameof(valueEnum)} contains an invalid value '{valueEnum}'")
 		};
 	}

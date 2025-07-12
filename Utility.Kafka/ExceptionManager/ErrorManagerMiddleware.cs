@@ -46,6 +46,7 @@ public class ErrorManagerMiddleware(ILogger<ErrorManagerMiddleware> logger)
 		catch (KafkaException ex) when (ot == OperationClient.Produce && methodName == "ProduceAsync")
 		{
 			_logger.LogError(ex, "Produzione del messaggio non eseguita correttamente");
+			throw;
 		}
 		catch (KafkaException ex) 
 		{
