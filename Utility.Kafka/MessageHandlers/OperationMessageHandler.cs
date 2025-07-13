@@ -14,7 +14,7 @@ namespace Utility.Kafka.MessageHandlers
 		: IMessageHandler<string, string>
 		 where TMessageDto : class
 		 where TModel : class
-
+		  
 	{
 		private ErrorManagerMiddleware _errorManager = errorManager;
 		public async Task OnMessageReceivedAsync(string key, string message, CancellationToken cancellationToken = default)
