@@ -39,13 +39,13 @@ namespace Utility.Kafka.MessageHandlers
 							await DeleteAsync(operationMessage.Dto, cancellationToken);
 							break;
 						case Operations.CompensationInsert:
-							await CompensationInsertAsync(operationMessage.Dto, cancellationToken);
+							await InsertAsync(operationMessage.Dto, cancellationToken);
 							break;
 						case Operations.CompensationUpdate:
-							await CompensationUpdateAsync(operationMessage.Dto, cancellationToken);
+							await UpdateAsync(operationMessage.Dto, cancellationToken);
 							break;
 						case Operations.CompensationDelete:
-							await CompensationDeleteAsync(operationMessage.Dto, cancellationToken);
+							await DeleteAsync(operationMessage.Dto, cancellationToken);
 							break;
 						default:
 							throw new InvalidOperationException( "Non è possibile chiamare una funzione al di fuori di quelle definite");
@@ -60,9 +60,7 @@ namespace Utility.Kafka.MessageHandlers
 		protected abstract Task InsertAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
 		protected abstract Task UpdateAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
 		protected abstract Task DeleteAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
-		protected abstract Task CompensationInsertAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
-		protected abstract Task CompensationUpdateAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
-		protected abstract Task CompensationDeleteAsync(TMessageDto messageDto, CancellationToken cancellationToken = default);
+
 
 
 	}

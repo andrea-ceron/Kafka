@@ -43,7 +43,6 @@ public class AdministratorClient : IAdministratorClient
 
 	public async  Task CreateTopicAsync(string topicName, int numPartitions = 1, short replicationFactor = 1)
 	{
-		// Aggiungere gesetione errori
 		var TopicConfig = new TopicSpecification
 		{
 			Name = topicName,

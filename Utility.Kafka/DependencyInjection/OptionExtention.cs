@@ -31,15 +31,19 @@ public class KafkaConsumerClientOptions : KafkaClientOptions
 	public string GroupId { get; set; } = string.Empty;
 }
 
-public class KafkaProducerServiceOptions
+public class KafkaCircuitBreakerOptions
 {
-	public const string SectionName = "Kafka:ProducerService";
+	public const string SectionName = "Kafka:ProducerService:CircuitBreaker";
 	public int MaxFailuresCloseCircuit { get; set; } = 5;
 	public int MaxFailuresHalfCloseCircuit { get; set; } = 1;
-	public int ResetTimeout { get; set; } = 3000;
 	public int MaxOpenCircuitCount { get; set; } = 3;
 	public int ProbabilityOfFailure { get; set; } = 50;
+}
 
+public class KafkaTimerOptions
+{
+	public const string SectionName = "Kafka:ProducerService:Timer";
+	public int ResetTimeout { get; set; } = 3000;
 }
 
 public interface IKafkaTopics

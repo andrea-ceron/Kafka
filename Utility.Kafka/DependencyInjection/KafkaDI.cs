@@ -2,12 +2,15 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Utility.Kafka.Abstraction.Clients;
 using Utility.Kafka.Abstraction.Errors;
 using Utility.Kafka.Abstraction.MessageHandlers;
 using Utility.Kafka.Clients;
 using Utility.Kafka.ExceptionManager;
+using Utility.Kafka.ExceptionManager.CircuitBreaker;
 using Utility.Kafka.Services;
+using Timer = Utility.Kafka.ExceptionManager.CircuitBreaker.Timer;
 
 namespace Utility.Kafka.DependencyInjection;
 
@@ -43,8 +46,6 @@ public static  class KafkaDI
 		service.AddSingleton<IHostedService, TProducerService>();
 		service.Configure<KafkaProducerClientOptions>(
 			configuration.GetSection(KafkaProducerClientOptions.SectionName));
-		service.Configure<KafkaProducerServiceOptions>(
-			configuration.GetSection(KafkaProducerServiceOptions.SectionName));
 		service.AddSingleton<IProducerClient<string, string>, Producer>();
 		service.Configure<TKafkaTopicsOutput>(
 		   configuration.GetSection(AbstractOutputKafkaTopics.SectionName));
@@ -60,7 +61,29 @@ public static  class KafkaDI
 		}
 		return options.Enable;
 	}
+	private static IServiceCollection AddCircuitBreaker(this IServiceCollection service, IConfiguration configuration)
+	{
+		service.Configure<KafkaCircuitBreakerOptions>(
+			configuration.GetSection(KafkaCircuitBreakerOptions.SectionName));
+		service.Configure<KafkaTimerOptions>(
+			configuration.GetSection(KafkaCircuitBreakerOptions.SectionName));
 
+		service.AddSingleton<ICircuitBreakerTimer, Timer>(sp =>
+		{
+			var options = sp.GetRequiredService<IOptions<KafkaTimerOptions>>();
+			var errorManagerMiddleware = sp.GetRequiredService<ErrorManagerMiddleware>();
+			return new Timer(options, errorManagerMiddleware);
+		});
+		service.AddSingleton<ICircuitBreaker, CircuitBreaker>(sp =>
+		{
+			var options = sp.GetRequiredService<IOptions<KafkaCircuitBreakerOptions>>();
+			var errorManagerMiddleware = sp.GetRequiredService<ErrorManagerMiddleware>();
+			ICircuitBreakerTimer timer = sp.GetRequiredService<ICircuitBreakerTimer>();
+			return new CircuitBreaker(options, errorManagerMiddleware, timer);
+		});
+
+		return service;
+	}
 	private static IServiceCollection AddErrorManager(this IServiceCollection service)
 	{
 		service.AddSingleton<ErrorManagerMiddleware>();
