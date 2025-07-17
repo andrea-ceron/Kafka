@@ -38,6 +38,7 @@ public class KafkaCircuitBreakerOptions
 	public int MaxFailuresHalfCloseCircuit { get; set; } = 1;
 	public int MaxOpenCircuitCount { get; set; } = 3;
 	public int ProbabilityOfFailure { get; set; } = 50;
+
 }
 
 public class KafkaTimerOptions

@@ -1,4 +1,5 @@
-﻿# Modulo Kafka.Utilityl modulo implementaclassi per la gestione di produzione e consumo di messaggi Kafka riguardanti la comunicazione tra diversi microservizi.
+﻿# Modulo Kafka.Utility
+Il modulo implementa classi per la gestione di produzione e consumo di messaggi Kafka riguardanti la comunicazione tra diversi microservizi.
 
 # Funzionalità principali
 - **Creazione di Admin Client**: Vengono messe a disposizione classe e interfaccia per la creazione di un Admin Client Kafka, utile per la gestione dei topic e delle configurazioni del cluster.
